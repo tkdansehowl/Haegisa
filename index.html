@@ -69,7 +69,7 @@
 
     <script>
         // 여기에 1단계에서 복사한 Google 스프레드시트의 CSV 링크를 붙여넣으세요!
-        const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpZGh9h95OtuFdBgUme_sC9n7WjRLZ1LIo8_GXRN2Fsbhu0CnndlXqP_iAPHq3aZJu9yooWY18CFYz/pubhtml?gid=0&single=true'; 
+        const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpZGh9h95OtuFdBgUme_sC9n7WjRLZ1LIo8_GXRN2Fsbhu0CnndlXqP_iAPHq3aZJu9yooWY18CFYz/pub?gid=0&single=true&output=csv'; 
 
         let problems = [];
         let currentProblemIndex = 0;
@@ -199,14 +199,23 @@
 
         // 보기 선택 시 호출되는 함수
         const handleAnswer = (selectedOptionKey) => {
-            if (showSolution) return;
+            if (showSolution) return; // 풀이가 이미 표시 중이면 다시 선택할 수 없게 합니다.
 
             const currentProblem = problems[currentProblemIndex];
             const correctOptionKey = currentProblem['정답'];
 
-            // 모든 보기 버튼 가져오기
+            // 모든 보기 버튼 가져오기 및 비활성화
             const optionButtons = optionsList.querySelectorAll('button');
+            optionButtons.forEach(button => {
+                button.disabled = true; // 모든 보기 비활성화
+                button.classList.remove('cursor-pointer');
+                button.classList.add('cursor-not-allowed');
 
+                // 기본 스타일 제거
+                button.classList.remove('bg-gray-50', 'border-gray-300', 'hover:bg-blue-50', 'hover:border-blue-400', 'text-gray-700');
+            });
+
+            // 선택된 보기와 정답 보기에 따라 스타일 적용
             optionButtons.forEach(button => {
                 // 버튼 텍스트에서 '가.', '나.' 등을 제거하고 실제 보기 텍스트만 비교하여 optionKey를 찾습니다.
                 const buttonTextPrefix = button.textContent.split('.')[0].trim();
@@ -219,26 +228,23 @@
                 }
 
                 if (buttonOptionKey === correctOptionKey) {
-                    // 정답 보기 스타일
-                    button.classList.remove('bg-gray-50', 'border-gray-300', 'hover:bg-blue-50', 'hover:border-blue-400', 'text-gray-700');
+                    // 정답 보기는 항상 초록색으로 표시
                     button.classList.add('bg-green-100', 'border-green-500', 'text-green-800', 'font-bold');
-                } else if (buttonOptionKey === selectedOptionKey && selectedOptionKey !== correctOptionKey) {
-                    // 선택한 오답 보기 스타일
-                    button.classList.remove('bg-gray-50', 'border-gray-300', 'hover:bg-blue-50', 'hover:border-blue-400', 'text-gray-700');
+                } else if (buttonOptionKey === selectedOptionKey) {
+                    // 선택한 보기가 오답일 경우 빨간색으로 표시
                     button.classList.add('bg-red-100', 'border-red-500', 'text-red-800');
                 }
-                button.disabled = true; // 모든 보기 비활성화
-                button.classList.remove('cursor-pointer');
-                button.classList.add('cursor-not-allowed');
             });
 
             if (selectedOptionKey === correctOptionKey) {
+                // 정답을 선택한 경우
                 isAnsweredCorrectly = true;
                 showSolution = false;
                 setTimeout(() => {
-                    handleNextProblem();
-                }, 1000); // 1초 후 다음 문제로 자동 이동
+                    handleNextProblem(); // 1초 후 다음 문제로 자동 이동
+                }, 1000);
             } else {
+                // 오답을 선택한 경우
                 isAnsweredCorrectly = false;
                 showSolution = true;
                 solutionArea.classList.remove('hidden'); // 풀이 영역 표시
