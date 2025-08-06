@@ -67,10 +67,7 @@
                     <label for="filter-shiptype" class="block text-left text-sm font-medium text-gray-700 mb-1">선종</label>
                     <select id="filter-shiptype" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"></select>
                 </div>
-                <div>
-                    <label for="filter-subject" class="block text-left text-sm font-medium text-gray-700 mb-1">과목</label>
-                    <select id="filter-subject" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"></select>
-                </div>
+                <!-- 과목 필터는 제거되었습니다. -->
             </div>
             <button id="start-quiz-button" class="mt-8 w-full max-w-xs bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors shadow-md">
                 문제풀이 시작
@@ -84,7 +81,7 @@
             </h2>
 
             <div class="mb-4 text-sm text-gray-600">
-                <span id="problem-meta-year"></span>년
+                <span id="problem-meta-year"></span>년 |
                 <span id="problem-meta-round"></span>회차 |
                 <span id="problem-meta-grade"></span>급 |
                 <span id="problem-meta-shiptype"></span> |
@@ -157,7 +154,7 @@
         const filterRound = document.getElementById('filter-round');
         const filterGrade = document.getElementById('filter-grade');
         const filterShiptype = document.getElementById('filter-shiptype');
-        const filterSubject = document.getElementById('filter-subject');
+        // const filterSubject = document.getElementById('filter-subject'); // 과목 필터 제거
         const startQuizButton = document.getElementById('start-quiz-button');
         const sidebarProblemNumbers = document.getElementById('sidebar-problem-numbers'); // 사이드바 문제 번호 목록
 
@@ -168,6 +165,9 @@
             '보기3': '사',
             '보기4': '아',
         };
+
+        // 과목 풀이 순서 정의
+        const subjectOrder = ['항해', '운용', '법규', '영어', '상선전문', '어선전문'];
 
         // TSV 텍스트를 파싱하여 문제 객체 배열로 변환하는 함수
         const parseTsv = (tsvText) => {
@@ -245,7 +245,7 @@
             populateSelect(filterRound, getUniqueValues('회차'));
             populateSelect(filterGrade, getUniqueValues('급수'));
             populateSelect(filterShiptype, getUniqueValues('선종'));
-            populateSelect(filterSubject, getUniqueValues('과목'));
+            // populateSelect(filterSubject, getUniqueValues('과목')); // 과목 필터 제거
         };
 
         // 필터 적용 및 문제풀이 시작
@@ -254,15 +254,27 @@
             const selectedRound = filterRound.value === '전체' ? '' : filterRound.value;
             const selectedGrade = filterGrade.value === '전체' ? '' : filterGrade.value;
             const selectedShiptype = filterShiptype.value === '전체' ? '' : filterShiptype.value;
-            const selectedSubject = filterSubject.value === '전체' ? '' : filterSubject.value;
+            // const selectedSubject = filterSubject.value === '전체' ? '' : filterSubject.value; // 과목 필터 제거
 
             filteredProblems = allProblems.filter(problem => {
                 return (selectedYear === '' || problem['연도'] === selectedYear) &&
                        (selectedRound === '' || problem['회차'] === selectedRound) &&
                        (selectedGrade === '' || problem['급수'] === selectedGrade) &&
-                       (selectedShiptype === '' || problem['선종'] === selectedShiptype) &&
-                       (selectedSubject === '' || problem['과목'] === selectedSubject);
+                       (selectedShiptype === '' || problem['선종'] === selectedShiptype);
+                       // (selectedSubject === '' || problem['과목'] === selectedSubject); // 과목 필터 조건 제거
             });
+
+            // 필터링된 문제를 과목 순서에 따라 정렬
+            filteredProblems.sort((a, b) => {
+                const indexA = subjectOrder.indexOf(a['과목']);
+                const indexB = subjectOrder.indexOf(b['과목']);
+                // 정의되지 않은 과목은 순서상 뒤로 보냄
+                if (indexA === -1 && indexB === -1) return 0;
+                if (indexA === -1) return 1;
+                if (indexB === -1) return -1;
+                return indexA - indexB;
+            });
+
 
             if (filteredProblems.length === 0) {
                 alert("선택한 조건에 맞는 문제가 없습니다. 필터를 다시 설정해주세요.");
@@ -279,7 +291,7 @@
 
         // 현재 문제를 화면에 표시하는 함수
         const displayProblem = () => {
-            const currentProblem = filteredProblems[currentProblemIndex]; // allProblems 대신 filteredProblems 사용
+            const currentProblem = filteredProblems[currentProblemIndex];
             
             // 문제 상세 정보 업데이트
             problemMetaYear.textContent = currentProblem['연도'] || '';
@@ -319,7 +331,8 @@
             filteredProblems.forEach((problem, index) => {
                 const li = document.createElement('li');
                 const button = document.createElement('button');
-                button.textContent = `문제 ${index + 1}`;
+                // '문제' 텍스트 제거하고 숫자만 표시
+                button.textContent = `${index + 1}`; 
                 button.className = `
                     w-full text-left p-2 rounded-md transition-colors duration-150
                     ${index === currentProblemIndex
@@ -346,7 +359,7 @@
         const handleAnswer = (selectedOptionKey) => {
             if (showSolution) return;
 
-            const currentProblem = filteredProblems[currentProblemIndex]; // allProblems 대신 filteredProblems 사용
+            const currentProblem = filteredProblems[currentProblemIndex];
             const correctOptionLabelFromSheet = currentProblem['정답'];
 
             let actualCorrectOptionKey = null;
@@ -402,7 +415,7 @@
             isAnsweredCorrectly = null;
             solutionArea.classList.add('hidden');
 
-            if (currentProblemIndex < filteredProblems.length - 1) { // allProblems 대신 filteredProblems 사용
+            if (currentProblemIndex < filteredProblems.length - 1) {
                 currentProblemIndex++;
                 displayProblem();
             } else {
