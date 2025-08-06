@@ -271,6 +271,18 @@
                 return indexA - indexB;
             });
 
+            // 과목별 문제 번호 재설정
+            let currentSubject = null;
+            let subjectProblemCounter = 0;
+            filteredProblems.forEach(problem => {
+                if (problem['과목'] !== currentSubject) {
+                    currentSubject = problem['과목'];
+                    subjectProblemCounter = 1;
+                }
+                problem.subjectProblemNumber = subjectProblemCounter;
+                subjectProblemCounter++;
+            });
+
 
             if (filteredProblems.length === 0) {
                 alert("선택한 조건에 맞는 문제가 없습니다. 필터를 다시 설정해주세요.");
@@ -296,7 +308,8 @@
             problemMetaShiptype.textContent = currentProblem['선종'] || '';
             problemMetaSubject.textContent = currentProblem['과목'] || '';
 
-            problemNumberSpan.textContent = `${currentProblemIndex + 1}.`;
+            // 문제 번호는 과목별 번호로 표시
+            problemNumberSpan.textContent = `${currentProblem.subjectProblemNumber}.`;
             problemQuestionSpan.textContent = currentProblem['문제'] || '문제 내용을 불러올 수 없습니다.';
             optionsList.innerHTML = ''; // 기존 보기 초기화
 
@@ -327,10 +340,11 @@
             filteredProblems.forEach((problem, index) => {
                 const li = document.createElement('li');
                 const button = document.createElement('button');
-                // '문제' 텍스트 제거하고 숫자만 표시
-                button.textContent = `${index + 1}`; 
+                // 문제 번호는 과목별 번호로 표시
+                button.textContent = `${problem.subjectProblemNumber}`; 
                 button.className = `
                     p-2 rounded-md transition-colors duration-150 text-center
+                    flex items-center justify-center w-10 h-10 flex-shrink-0
                     ${index === currentProblemIndex
                         ? 'bg-blue-600 text-white font-bold shadow-sm'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
