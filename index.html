@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>해기사 문제풀이</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+        /* 풀이 텍스트의 줄바꿈을 유지 */
+        .whitespace-pre-wrap {
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-lg p-6 md:p-8 w-full max-w-2xl">
+        <h2 class="text-2xl md:text-3xl font-bold text-blue-700 mb-6 text-center">
+            해기사 문제풀이
+        </h2>
+
+        <div id="loading-message" class="hidden min-h-24 flex items-center justify-center">
+            <p class="text-xl text-gray-700">문제 데이터를 불러오는 중입니다...</p>
+        </div>
+        <div id="error-message" class="hidden min-h-24 flex items-center justify-center bg-red-100 text-red-700 p-4 rounded-lg">
+            <p class="text-xl"></p>
+        </div>
+        <div id="no-data-message" class="hidden min-h-24 flex items-center justify-center bg-yellow-100 text-yellow-700 p-4 rounded-lg">
+            <p class="text-xl">문제 데이터가 없습니다. Google Sheet를 확인해주세요.</p>
+        </div>
+
+        <div id="quiz-container" class="hidden">
+            <div class="mb-6">
+                <p class="text-lg font-semibold text-gray-800 mb-2">
+                    <span id="problem-number" class="text-blue-500"></span> <span id="problem-question"></span>
+                </p>
+                <ul id="options-list" class="space-y-3">
+                    </ul>
+            </div>
+
+            <div id="solution-area" class="mt-6 p-4 rounded-lg bg-yellow-50 border border-yellow-300 text-yellow-800 hidden">
+                <h3 class="font-bold text-lg mb-2">풀이:</h3>
+                <p id="solution-text" class="whitespace-pre-wrap"></p>
+                <button
+                    id="next-problem-button"
+                    class="mt-4 w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                >
+                    다음 문제
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 여기에 1단계에서 복사한 Google 스프레드시트의 CSV 링크를 붙여넣으세요!
+        const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpZGh9h95OtuFdBgUme_sC9n7WjRLZ1LIo8_GXRN2Fsbhu0CnndlXqP_iAPHq3aZJu9yooWY18CFYz/pubhtml?gid=0&single=true'; 
+
+        let problems = [];
+        let currentProblemIndex = 0;
+        let showSolution = false;
+        let isAnsweredCorrectly = null; // null: 아직 선택 안 함, true: 정답, false: 오답
+
+        // DOM 요소 가져오기
+        const loadingMessage = document.getElementById('loading-message');
+        const errorMessage = document.getElementById('error-message');
+        const noDataMessage = document.getElementById('no-data-message');
+        const quizContainer = document.getElementById('quiz-container');
+        const problemNumberSpan = document.getElementById('problem-number');
+        const problemQuestionSpan = document.getElementById('problem-question');
+        const optionsList = document.getElementById('options-list');
+        const solutionArea = document.getElementById('solution-area');
+        const solutionText = document.getElementById('solution-text');
+        const nextProblemButton = document.getElementById('next-problem-button');
+
+        // 보기1~4를 '가', '나', '사', '아'로 매핑하기 위한 객체
+        const optionLabels = {
+            '보기1': '가',
+            '보기2': '나',
+            '보기3': '사',
+            '보기4': '아',
+        };
+
+        // CSV 텍스트를 파싱하여 문제 객체 배열로 변환하는 함수
+        const parseCsv = (csvText) => {
+            const lines = csvText.split('\n').filter(line => line.trim() !== '');
+            if (lines.length < 2) return [];
+
+            const headers = lines[0].split(',').map(h => h.trim());
+            const data = lines.slice(1).map(line => {
+                const values = line.split(',').map(v => v.trim());
+                let problem = {};
+                headers.forEach((header, index) => {
+                    problem[header] = values[index];
+                });
+                return problem;
+            });
+            return data;
+        };
+
+        // 문제 데이터를 불러오는 함수
+        const fetchProblems = async () => {
+            loadingMessage.classList.remove('hidden');
+            quizContainer.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+            noDataMessage.classList.add('hidden');
+
+            try {
+                const response = await fetch(GOOGLE_SHEET_CSV_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP 오류! 상태: ${response.status}`);
+                }
+                const csvText = await response.text();
+                problems = parseCsv(csvText);
+
+                if (problems.length === 0) {
+                    noDataMessage.classList.remove('hidden');
+                } else {
+                    displayProblem(); // 문제 표시
+                    quizContainer.classList.remove('hidden');
+                }
+            } catch (e) {
+                console.error("문제 데이터를 불러오는 데 실패했습니다:", e);
+                errorMessage.classList.remove('hidden');
+                errorMessage.querySelector('p').textContent = "문제 데이터를 불러오는 데 실패했습니다. Google Sheet URL을 확인하거나, 웹에 제대로 게시되었는지 확인해주세요.";
+            } finally {
+                loadingMessage.classList.add('hidden');
+            }
+        };
+
+        // 현재 문제를 화면에 표시하는 함수
+        const displayProblem = () => {
+            const currentProblem = problems[currentProblemIndex];
+            problemNumberSpan.textContent = `${currentProblemIndex + 1}.`;
+            problemQuestionSpan.textContent = currentProblem['문제'];
+            optionsList.innerHTML = ''; // 기존 보기 초기화
+
+            ['보기1', '보기2', '보기3', '보기4'].forEach((optionKey) => {
+                const li = document.createElement('li');
+                const button = document.createElement('button');
+                button.textContent = `${optionLabels[optionKey]}. ${currentProblem[optionKey]}`;
+                button.className = `
+                    w-full text-left p-3 rounded-lg border-2 transition-all duration-200
+                    bg-gray-50 border-gray-300 hover:bg-blue-50 hover:border-blue-400 text-gray-700
+                    cursor-pointer
+                `;
+                button.onclick = () => handleAnswer(optionKey);
+                li.appendChild(button);
+                optionsList.appendChild(li);
+            });
+
+            solutionArea.classList.add('hidden'); // 풀이 영역 숨김
+            solutionText.textContent = ''; // 풀이 텍스트 초기화
+            showSolution = false;
+            isAnsweredCorrectly = null;
+        };
+
+        // 보기 선택 시 호출되는 함수
+        const handleAnswer = (selectedOptionKey) => {
+            if (showSolution) return;
+
+            const currentProblem = problems[currentProblemIndex];
+            const correctOptionKey = currentProblem['정답'];
+
+            // 모든 보기 버튼 가져오기
+            const optionButtons = optionsList.querySelectorAll('button');
+
+            optionButtons.forEach(button => {
+                const buttonOptionKey = Object.keys(optionLabels).find(key => 
+                    button.textContent.startsWith(`${optionLabels[key]}.`)
+                );
+
+                if (buttonOptionKey === correctOptionKey) {
+                    // 정답 보기 스타일
+                    button.classList.remove('bg-gray-50', 'border-gray-300', 'hover:bg-blue-50', 'hover:border-blue-400', 'text-gray-700');
+                    button.classList.add('bg-green-100', 'border-green-500', 'text-green-800', 'font-bold');
+                } else if (buttonOptionKey === selectedOptionKey && selectedOptionKey !== correctOptionKey) {
+                    // 선택한 오답 보기 스타일
+                    button.classList.remove('bg-gray-50', 'border-gray-300', 'hover:bg-blue-50', 'hover:border-blue-400', 'text-gray-700');
+                    button.classList.add('bg-red-100', 'border-red-500', 'text-red-800');
+                }
+                button.disabled = true; // 모든 보기 비활성화
+                button.classList.remove('cursor-pointer');
+                button.classList.add('cursor-not-allowed');
+            });
+
+            if (selectedOptionKey === correctOptionKey) {
+                isAnsweredCorrectly = true;
+                showSolution = false;
+                setTimeout(() => {
+                    handleNextProblem();
+                }, 1000); // 1초 후 다음 문제로 자동 이동
+            } else {
+                isAnsweredCorrectly = false;
+                showSolution = true;
+                solutionArea.classList.remove('hidden'); // 풀이 영역 표시
+                solutionText.textContent = currentProblem['풀이'];
+            }
+        };
+
+        // 다음 문제로 이동하는 함수
+        const handleNextProblem = () => {
+            showSolution = false;
+            isAnsweredCorrectly = null;
+            solutionArea.classList.add('hidden');
+
+            if (currentProblemIndex < problems.length - 1) {
+                currentProblemIndex++;
+                displayProblem();
+            } else {
+                alert("모든 문제를 풀었습니다! 처음으로 돌아갑니다.");
+                currentProblemIndex = 0;
+                displayProblem();
+            }
+        };
+
+        // '다음 문제' 버튼 클릭 이벤트 리스너
+        nextProblemButton.addEventListener('click', handleNextProblem);
+
+        // 페이지 로드 시 문제 데이터 불러오기
+        window.onload = fetchProblems;
+    </script>
+</body>
+</html>
