@@ -337,7 +337,19 @@
         // 문제 목록 사이드바 업데이트
         const updateProblemListSidebar = () => {
             sidebarProblemNumbers.innerHTML = ''; // 기존 목록 초기화
+            let currentSubjectDisplayed = null;
+
             filteredProblems.forEach((problem, index) => {
+                // 과목이 변경될 때만 과목 헤더 추가
+                if (problem['과목'] !== currentSubjectDisplayed) {
+                    currentSubjectDisplayed = problem['과목'];
+                    const subjectHeadingLi = document.createElement('li');
+                    // Tailwind CSS의 col-span-5를 사용하여 그리드 전체 너비를 차지하도록 함
+                    subjectHeadingLi.className = 'col-span-5 text-left mt-4 mb-1 text-gray-800 font-bold text-base border-b pb-1 border-gray-300';
+                    subjectHeadingLi.textContent = currentSubjectDisplayed;
+                    sidebarProblemNumbers.appendChild(subjectHeadingLi);
+                }
+
                 const li = document.createElement('li');
                 const button = document.createElement('button');
                 // 문제 번호는 과목별 번호로 표시
