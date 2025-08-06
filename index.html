@@ -227,11 +227,18 @@
         const populateFilters = () => {
             const getUniqueValues = (key) => {
                 const values = allProblems.map(p => p[key]).filter(Boolean); // 빈 값 제외
-                return ['전체', ...new Set(values)].sort(); // '전체' 옵션 추가 및 정렬
+                // '전체' 옵션 제거
+                return [...new Set(values)].sort(); 
             };
 
             const populateSelect = (selectElement, values) => {
                 selectElement.innerHTML = ''; // 기존 옵션 초기화
+                // 첫 번째 옵션으로 "선택하세요" 또는 "모두" 추가 (기본값)
+                const defaultOption = document.createElement('option');
+                defaultOption.value = ''; // 빈 값으로 설정하여 필터링 시 해당 조건 무시
+                defaultOption.textContent = '선택하세요'; // 또는 '모두'
+                selectElement.appendChild(defaultOption);
+
                 values.forEach(value => {
                     const option = document.createElement('option');
                     option.value = value;
@@ -248,10 +255,11 @@
 
         // 필터 적용 및 문제풀이 시작
         const applyFilters = () => {
-            const selectedYear = filterYear.value === '전체' ? '' : filterYear.value;
-            const selectedRound = filterRound.value === '전체' ? '' : filterRound.value;
-            const selectedGrade = filterGrade.value === '전체' ? '' : filterGrade.value;
-            const selectedShiptype = filterShiptype.value === '전체' ? '' : filterShiptype.value;
+            // 필터 선택이 안 되어 있으면 빈 값으로 처리하여 모든 값 포함
+            const selectedYear = filterYear.value;
+            const selectedRound = filterRound.value;
+            const selectedGrade = filterGrade.value;
+            const selectedShiptype = filterShiptype.value;
 
             filteredProblems = allProblems.filter(problem => {
                 return (selectedYear === '' || problem['연도'] === selectedYear) &&
@@ -271,7 +279,7 @@
                 return indexA - indexB;
             });
 
-            // 과목별 문제 번호 재설정
+            // 과목별 문제 번호 재설정 및 상태 초기화
             let currentSubject = null;
             let subjectProblemCounter = 0;
             filteredProblems.forEach(problem => {
@@ -280,6 +288,7 @@
                     subjectProblemCounter = 1;
                 }
                 problem.subjectProblemNumber = subjectProblemCounter;
+                problem.status = 'unanswered'; // 모든 문제 상태 초기화
                 subjectProblemCounter++;
             });
 
@@ -354,12 +363,21 @@
                 const button = document.createElement('button');
                 // 문제 번호는 과목별 번호로 표시
                 button.textContent = `${problem.subjectProblemNumber}`; 
+                
+                // 문제 상태에 따른 배경색 클래스 추가
+                let statusClass = 'bg-gray-200 text-gray-700 hover:bg-gray-300'; // 기본값
+                if (problem.status === 'correct') {
+                    statusClass = 'bg-green-200 text-green-800';
+                } else if (problem.status === 'incorrect') {
+                    statusClass = 'bg-red-200 text-red-800';
+                }
+
                 button.className = `
                     p-2 rounded-md transition-colors duration-150 text-center
                     flex items-center justify-center w-10 h-10 flex-shrink-0
                     ${index === currentProblemIndex
-                        ? 'bg-blue-600 text-white font-bold shadow-sm'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        ? 'bg-blue-600 text-white font-bold shadow-sm' // 현재 문제
+                        : statusClass // 풀이 상태에 따른 색상
                     }
                 `;
                 button.onclick = () => {
@@ -420,15 +438,18 @@
             if (selectedOptionKey === actualCorrectOptionKey) {
                 isAnsweredCorrectly = true;
                 showSolution = false;
+                filteredProblems[currentProblemIndex].status = 'correct'; // 정답 상태 저장
                 setTimeout(() => {
                     handleNextProblem();
                 }, 1000);
             } else {
                 isAnsweredCorrectly = false;
                 showSolution = true;
+                filteredProblems[currentProblemIndex].status = 'incorrect'; // 오답 상태 저장
                 solutionArea.classList.remove('hidden');
                 solutionText.textContent = currentProblem['풀이'] || '풀이 내용을 불러올 수 없습니다.';
             }
+            updateProblemListSidebar(); // 상태 변경 후 사이드바 업데이트
         };
 
         // 다음 문제로 이동하는 함수
