@@ -15,27 +15,74 @@
         .whitespace-pre-wrap {
             white-space: pre-wrap;
         }
+        /* 스크롤바 스타일링 (선택 사항) */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e2e8f0; /* gray-200 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8; /* gray-400 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; /* gray-500 */
+        }
     </style>
 </head>
 <body class="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-lg p-6 md:p-8 w-full max-w-2xl">
-        <h2 class="text-2xl md:text-3xl font-bold text-blue-700 mb-6 text-center">
-            해기사 문제풀이
-        </h2>
-
+    <div class="bg-white rounded-xl shadow-lg p-6 md:p-8 w-full max-w-5xl flex flex-col md:flex-row gap-6">
         <!-- 로딩 및 에러 메시지 표시 영역 -->
-        <div id="loading-message" class="hidden min-h-24 flex items-center justify-center">
+        <div id="loading-message" class="absolute inset-0 bg-gray-100 bg-opacity-75 flex items-center justify-center z-10">
             <p class="text-xl text-gray-700">문제 데이터를 불러오는 중입니다...</p>
         </div>
-        <div id="error-message" class="hidden min-h-24 flex items-center justify-center bg-red-100 text-red-700 p-4 rounded-lg">
-            <p class="text-xl"></p>
+        <div id="error-message" class="absolute inset-0 bg-red-100 bg-opacity-75 flex items-center justify-center z-10 hidden">
+            <p class="text-xl text-red-700 p-4 rounded-lg"></p>
         </div>
-        <div id="no-data-message" class="hidden min-h-24 flex items-center justify-center bg-yellow-100 text-yellow-700 p-4 rounded-lg">
-            <p class="text-xl">문제 데이터가 없습니다. Google Sheet를 확인해주세요.</p>
+        <div id="no-data-message" class="absolute inset-0 bg-yellow-100 bg-opacity-75 flex items-center justify-center z-10 hidden">
+            <p class="text-xl text-yellow-700 p-4 rounded-lg">문제 데이터가 없습니다. Google Sheet를 확인해주세요.</p>
+        </div>
+
+        <!-- 필터링 섹션 -->
+        <div id="filter-section" class="w-full md:w-1/2 lg:w-2/5 p-4 bg-blue-50 rounded-xl shadow-md flex flex-col justify-center items-center text-center">
+            <h2 class="text-3xl md:text-4xl font-bold text-blue-800 mb-6">문제 필터링</h2>
+            <p class="text-gray-700 mb-6">원하는 조건으로 문제를 필터링하여 풀이할 수 있습니다.</p>
+            
+            <div class="space-y-4 w-full max-w-xs">
+                <div>
+                    <label for="filter-year" class="block text-left text-sm font-medium text-gray-700 mb-1">연도</label>
+                    <select id="filter-year" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"></select>
+                </div>
+                <div>
+                    <label for="filter-round" class="block text-left text-sm font-medium text-gray-700 mb-1">회차</label>
+                    <select id="filter-round" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"></select>
+                </div>
+                <div>
+                    <label for="filter-grade" class="block text-left text-sm font-medium text-gray-700 mb-1">급수</label>
+                    <select id="filter-grade" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"></select>
+                </div>
+                <div>
+                    <label for="filter-shiptype" class="block text-left text-sm font-medium text-gray-700 mb-1">선종</label>
+                    <select id="filter-shiptype" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"></select>
+                </div>
+                <div>
+                    <label for="filter-subject" class="block text-left text-sm font-medium text-gray-700 mb-1">과목</label>
+                    <select id="filter-subject" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"></select>
+                </div>
+            </div>
+            <button id="start-quiz-button" class="mt-8 w-full max-w-xs bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors shadow-md">
+                문제풀이 시작
+            </button>
         </div>
 
         <!-- 문제 풀이 영역 -->
-        <div id="quiz-container" class="hidden">
+        <div id="quiz-container" class="w-full md:w-1/2 lg:w-3/5 hidden flex flex-col">
+            <h2 class="text-2xl md:text-3xl font-bold text-blue-700 mb-6 text-center">
+                해기사 문제풀이
+            </h2>
+
             <div class="mb-4 text-sm text-gray-600">
                 <span id="problem-meta-year"></span>년
                 <span id="problem-meta-round"></span>회차 |
@@ -65,13 +112,22 @@
                 </button>
             </div>
         </div>
+
+        <!-- 문제 목록 사이드바 -->
+        <div id="problem-list-sidebar" class="w-full md:w-1/4 lg:w-1/5 bg-gray-50 p-4 rounded-xl shadow-md hidden md:block overflow-y-auto max-h-[80vh]">
+            <h3 class="text-xl font-bold text-gray-700 mb-4">문제 목록</h3>
+            <ul id="sidebar-problem-numbers" class="space-y-2">
+                <!-- 문제 번호들이 여기에 동적으로 삽입됩니다 -->
+            </ul>
+        </div>
     </div>
 
     <script>
-        // 여기에 1단계에서 복사한 Google 스프레드시트의 TSV 링크를 붙여넣으세요!
+        // 여기에 Google 스프레드시트의 TSV 링크를 붙여넣으세요!
         const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpZGh9h95OtuFdBgUme_sC9n7WjRLZ1LIo8_GXRN2Fsbhu0CnndlXqP_iAPHq3aZJu9yooWY18CFYz/pub?gid=0&single=true&output=tsv'; 
 
-        let problems = [];
+        let allProblems = []; // 모든 문제 데이터
+        let filteredProblems = []; // 필터링된 문제 데이터
         let currentProblemIndex = 0;
         let showSolution = false;
         let isAnsweredCorrectly = null; // null: 아직 선택 안 함, true: 정답, false: 오답
@@ -80,7 +136,15 @@
         const loadingMessage = document.getElementById('loading-message');
         const errorMessage = document.getElementById('error-message');
         const noDataMessage = document.getElementById('no-data-message');
+        const filterSection = document.getElementById('filter-section');
         const quizContainer = document.getElementById('quiz-container');
+        const problemListSidebar = document.getElementById('problem-list-sidebar'); // 사이드바 컨테이너
+
+        const problemMetaYear = document.getElementById('problem-meta-year');
+        const problemMetaRound = document.getElementById('problem-meta-round');
+        const problemMetaGrade = document.getElementById('problem-meta-grade');
+        const problemMetaShiptype = document.getElementById('problem-meta-shiptype');
+        const problemMetaSubject = document.getElementById('problem-meta-subject');
         const problemNumberSpan = document.getElementById('problem-number');
         const problemQuestionSpan = document.getElementById('problem-question');
         const optionsList = document.getElementById('options-list');
@@ -88,12 +152,14 @@
         const solutionText = document.getElementById('solution-text');
         const nextProblemButton = document.getElementById('next-problem-button');
 
-        // 추가된 문제 상세 정보 표시 요소
-        const problemMetaYear = document.getElementById('problem-meta-year');
-        const problemMetaRound = document.getElementById('problem-meta-round');
-        const problemMetaGrade = document.getElementById('problem-meta-grade');
-        const problemMetaShiptype = document.getElementById('problem-meta-shiptype');
-        const problemMetaSubject = document.getElementById('problem-meta-subject');
+        // 필터 드롭다운 요소
+        const filterYear = document.getElementById('filter-year');
+        const filterRound = document.getElementById('filter-round');
+        const filterGrade = document.getElementById('filter-grade');
+        const filterShiptype = document.getElementById('filter-shiptype');
+        const filterSubject = document.getElementById('filter-subject');
+        const startQuizButton = document.getElementById('start-quiz-button');
+        const sidebarProblemNumbers = document.getElementById('sidebar-problem-numbers'); // 사이드바 문제 번호 목록
 
         // 보기1~4를 '가', '나', '사', '아'로 매핑하기 위한 객체
         const optionLabels = {
@@ -103,51 +169,51 @@
             '보기4': '아',
         };
 
-        // TSV 텍스트를 파싱하여 문제 객체 배열로 변환하는 함수 (수정됨: 탭으로 분리)
-        const parseCsv = (tsvText) => { // 함수 이름을 parseTsv로 변경하는 것이 더 정확하지만, 기존 코드와의 일관성을 위해 유지
+        // TSV 텍스트를 파싱하여 문제 객체 배열로 변환하는 함수
+        const parseTsv = (tsvText) => {
             const lines = tsvText.split('\n').filter(line => line.trim() !== '');
             if (lines.length < 2) {
                 console.warn("TSV 데이터에 헤더 또는 내용이 부족합니다.");
                 return [];
             }
 
-            // 헤더 파싱 및 공백 제거 (탭으로 분리)
             const headers = lines[0].split('\t').map(h => h.trim());
-            console.log("TSV 파싱 - 헤더:", headers); // 디버깅용 로그
+            console.log("TSV 파싱 - 헤더:", headers);
 
             const data = lines.slice(1).map(line => {
-                // 각 줄의 값 파싱 및 공백 제거 (탭으로 분리)
                 const values = line.split('\t').map(v => v.trim());
                 let problem = {};
                 headers.forEach((header, index) => {
-                    problem[header] = values[index]; // 헤더와 값을 매핑하여 문제 객체 생성
+                    problem[header] = values[index];
                 });
                 return problem;
             });
-            console.log("TSV 파싱 - 첫 번째 문제 객체:", data[0]); // 디버깅용 로그
+            console.log("TSV 파싱 - 첫 번째 문제 객체:", data[0]);
             return data;
         };
 
         // 문제 데이터를 불러오는 함수
         const fetchProblems = async () => {
             loadingMessage.classList.remove('hidden');
+            filterSection.classList.add('hidden');
             quizContainer.classList.add('hidden');
+            problemListSidebar.classList.add('hidden');
             errorMessage.classList.add('hidden');
             noDataMessage.classList.add('hidden');
 
             try {
-                const response = await fetch(GOOGLE_SHEET_CSV_URL); // 변수명은 그대로 유지
+                const response = await fetch(GOOGLE_SHEET_CSV_URL);
                 if (!response.ok) {
                     throw new Error(`HTTP 오류! 상태: ${response.status}`);
                 }
-                const tsvText = await response.text(); // 변수명을 tsvText로 변경
-                problems = parseCsv(tsvText);
+                const tsvText = await response.text();
+                allProblems = parseTsv(tsvText);
 
-                if (problems.length === 0) {
+                if (allProblems.length === 0) {
                     noDataMessage.classList.remove('hidden');
                 } else {
-                    displayProblem(); // 문제 표시
-                    quizContainer.classList.remove('hidden');
+                    populateFilters(); // 필터 드롭다운 채우기
+                    filterSection.classList.remove('hidden'); // 필터 섹션 표시
                 }
             } catch (e) {
                 console.error("문제 데이터를 불러오는 데 실패했습니다:", e);
@@ -158,9 +224,62 @@
             }
         };
 
+        // 필터 드롭다운 채우기
+        const populateFilters = () => {
+            const getUniqueValues = (key) => {
+                const values = allProblems.map(p => p[key]).filter(Boolean); // 빈 값 제외
+                return ['전체', ...new Set(values)].sort(); // '전체' 옵션 추가 및 정렬
+            };
+
+            const populateSelect = (selectElement, values) => {
+                selectElement.innerHTML = ''; // 기존 옵션 초기화
+                values.forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    selectElement.appendChild(option);
+                });
+            };
+
+            populateSelect(filterYear, getUniqueValues('연도'));
+            populateSelect(filterRound, getUniqueValues('회차'));
+            populateSelect(filterGrade, getUniqueValues('급수'));
+            populateSelect(filterShiptype, getUniqueValues('선종'));
+            populateSelect(filterSubject, getUniqueValues('과목'));
+        };
+
+        // 필터 적용 및 문제풀이 시작
+        const applyFilters = () => {
+            const selectedYear = filterYear.value === '전체' ? '' : filterYear.value;
+            const selectedRound = filterRound.value === '전체' ? '' : filterRound.value;
+            const selectedGrade = filterGrade.value === '전체' ? '' : filterGrade.value;
+            const selectedShiptype = filterShiptype.value === '전체' ? '' : filterShiptype.value;
+            const selectedSubject = filterSubject.value === '전체' ? '' : filterSubject.value;
+
+            filteredProblems = allProblems.filter(problem => {
+                return (selectedYear === '' || problem['연도'] === selectedYear) &&
+                       (selectedRound === '' || problem['회차'] === selectedRound) &&
+                       (selectedGrade === '' || problem['급수'] === selectedGrade) &&
+                       (selectedShiptype === '' || problem['선종'] === selectedShiptype) &&
+                       (selectedSubject === '' || problem['과목'] === selectedSubject);
+            });
+
+            if (filteredProblems.length === 0) {
+                alert("선택한 조건에 맞는 문제가 없습니다. 필터를 다시 설정해주세요.");
+                return;
+            }
+
+            currentProblemIndex = 0; // 필터 적용 시 첫 문제로 리셋
+            filterSection.classList.add('hidden');
+            quizContainer.classList.remove('hidden');
+            problemListSidebar.classList.remove('hidden'); // 사이드바 표시
+            displayProblem(); // 필터링된 첫 문제 표시
+            updateProblemListSidebar(); // 사이드바 문제 목록 업데이트
+        };
+
         // 현재 문제를 화면에 표시하는 함수
         const displayProblem = () => {
-            const currentProblem = problems[currentProblemIndex];
+            const currentProblem = filteredProblems[currentProblemIndex]; // allProblems 대신 filteredProblems 사용
             
             // 문제 상세 정보 업데이트
             problemMetaYear.textContent = currentProblem['연도'] || '';
@@ -170,13 +289,12 @@
             problemMetaSubject.textContent = currentProblem['과목'] || '';
 
             problemNumberSpan.textContent = `${currentProblemIndex + 1}.`;
-            problemQuestionSpan.textContent = currentProblem['문제'] || '문제 내용을 불러올 수 없습니다.'; // 문제 내용이 없으면 기본 메시지 표시
+            problemQuestionSpan.textContent = currentProblem['문제'] || '문제 내용을 불러올 수 없습니다.';
             optionsList.innerHTML = ''; // 기존 보기 초기화
 
             ['보기1', '보기2', '보기3', '보기4'].forEach((optionKey) => {
                 const li = document.createElement('li');
                 const button = document.createElement('button');
-                // 보기가 undefined로 나오는 문제 해결을 위해 || '' 추가
                 button.textContent = `${optionLabels[optionKey]}. ${currentProblem[optionKey] || ''}`; 
                 button.className = `
                     w-full text-left p-3 rounded-lg border-2 transition-all duration-200
@@ -192,29 +310,62 @@
             solutionText.textContent = ''; // 풀이 텍스트 초기화
             showSolution = false;
             isAnsweredCorrectly = null;
+            updateProblemListSidebar(); // 문제 변경 시 사이드바 하이라이트 업데이트
+        };
+
+        // 문제 목록 사이드바 업데이트
+        const updateProblemListSidebar = () => {
+            sidebarProblemNumbers.innerHTML = ''; // 기존 목록 초기화
+            filteredProblems.forEach((problem, index) => {
+                const li = document.createElement('li');
+                const button = document.createElement('button');
+                button.textContent = `문제 ${index + 1}`;
+                button.className = `
+                    w-full text-left p-2 rounded-md transition-colors duration-150
+                    ${index === currentProblemIndex
+                        ? 'bg-blue-600 text-white font-bold shadow-sm'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }
+                `;
+                button.onclick = () => {
+                    currentProblemIndex = index; // 클릭한 문제로 인덱스 변경
+                    displayProblem(); // 해당 문제 표시
+                };
+                li.appendChild(button);
+                sidebarProblemNumbers.appendChild(li);
+            });
+
+            // 현재 문제 번호가 사이드바에 보이도록 스크롤
+            const activeProblemButton = sidebarProblemNumbers.querySelector('.bg-blue-600');
+            if (activeProblemButton) {
+                activeProblemButton.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
         };
 
         // 보기 선택 시 호출되는 함수
         const handleAnswer = (selectedOptionKey) => {
-            if (showSolution) return; // 풀이가 이미 표시 중이면 다시 선택할 수 없게 합니다.
+            if (showSolution) return;
 
-            const currentProblem = problems[currentProblemIndex];
-            const correctOptionKey = currentProblem['정답'];
+            const currentProblem = filteredProblems[currentProblemIndex]; // allProblems 대신 filteredProblems 사용
+            const correctOptionLabelFromSheet = currentProblem['정답'];
 
-            // 모든 보기 버튼 가져오기 및 비활성화
+            let actualCorrectOptionKey = null;
+            for (const key in optionLabels) {
+                if (optionLabels[key] === correctOptionLabelFromSheet) {
+                    actualCorrectOptionKey = key;
+                    break;
+                }
+            }
+            
             const optionButtons = optionsList.querySelectorAll('button');
             optionButtons.forEach(button => {
-                button.disabled = true; // 모든 보기 비활성화
+                button.disabled = true;
                 button.classList.remove('cursor-pointer');
                 button.classList.add('cursor-not-allowed');
-
-                // 기본 스타일 제거
                 button.classList.remove('bg-gray-50', 'border-gray-300', 'hover:bg-blue-50', 'hover:border-blue-400', 'text-gray-700');
             });
 
-            // 선택된 보기와 정답 보기에 따라 스타일 적용
             optionButtons.forEach(button => {
-                // 버튼 텍스트에서 '가.', '나.' 등을 제거하고 실제 보기 텍스트만 비교하여 optionKey를 찾습니다.
                 const buttonTextPrefix = button.textContent.split('.')[0].trim();
                 let buttonOptionKey = null;
                 for (const key in optionLabels) {
@@ -224,28 +375,24 @@
                     }
                 }
 
-                if (buttonOptionKey === correctOptionKey) {
-                    // 정답 보기는 항상 초록색으로 표시
+                if (buttonOptionKey === actualCorrectOptionKey) {
                     button.classList.add('bg-green-100', 'border-green-500', 'text-green-800', 'font-bold');
                 } else if (buttonOptionKey === selectedOptionKey) {
-                    // 선택한 보기가 오답일 경우 빨간색으로 표시
                     button.classList.add('bg-red-100', 'border-red-500', 'text-red-800');
                 }
             });
 
-            if (selectedOptionKey === correctOptionKey) {
-                // 정답을 선택한 경우
+            if (selectedOptionKey === actualCorrectOptionKey) {
                 isAnsweredCorrectly = true;
                 showSolution = false;
                 setTimeout(() => {
-                    handleNextProblem(); // 1초 후 다음 문제로 자동 이동
+                    handleNextProblem();
                 }, 1000);
             } else {
-                // 오답을 선택한 경우
                 isAnsweredCorrectly = false;
                 showSolution = true;
-                solutionArea.classList.remove('hidden'); // 풀이 영역 표시
-                solutionText.textContent = currentProblem['풀이'] || '풀이 내용을 불러올 수 없습니다.'; // 풀이 내용이 없으면 기본 메시지 표시
+                solutionArea.classList.remove('hidden');
+                solutionText.textContent = currentProblem['풀이'] || '풀이 내용을 불러올 수 없습니다.';
             }
         };
 
@@ -255,7 +402,7 @@
             isAnsweredCorrectly = null;
             solutionArea.classList.add('hidden');
 
-            if (currentProblemIndex < problems.length - 1) {
+            if (currentProblemIndex < filteredProblems.length - 1) { // allProblems 대신 filteredProblems 사용
                 currentProblemIndex++;
                 displayProblem();
             } else {
@@ -265,7 +412,8 @@
             }
         };
 
-        // '다음 문제' 버튼 클릭 이벤트 리스너
+        // 이벤트 리스너 연결
+        startQuizButton.addEventListener('click', applyFilters);
         nextProblemButton.addEventListener('click', handleNextProblem);
 
         // 페이지 로드 시 문제 데이터 불러오기
