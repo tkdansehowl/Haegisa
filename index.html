@@ -68,8 +68,8 @@
     </div>
 
     <script>
-        // 여기에 1단계에서 복사한 Google 스프레드시트의 CSV 링크를 붙여넣으세요!
-        const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpZGh9h95OtuFdBgUme_sC9n7WjRLZ1LIo8_GXRN2Fsbhu0CnndlXqP_iAPHq3aZJu9yooWY18CFYz/pub?gid=0&single=true&output=csv'; 
+        // 여기에 1단계에서 복사한 Google 스프레드시트의 TSV 링크를 붙여넣으세요!
+        const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpZGh9h95OtuFdBgUme_sC9n7WjRLZ1LIo8_GXRN2Fsbhu0CnndlXqP_iAPHq3aZJu9yooWY18CFYz/pub?gid=0&single=true&output=tsv'; 
 
         let problems = [];
         let currentProblemIndex = 0;
@@ -103,31 +103,28 @@
             '보기4': '아',
         };
 
-        // CSV 텍스트를 파싱하여 문제 객체 배열로 변환하는 함수
-        const parseCsv = (csvText) => {
-            const lines = csvText.split('\n').filter(line => line.trim() !== '');
+        // TSV 텍스트를 파싱하여 문제 객체 배열로 변환하는 함수 (수정됨: 탭으로 분리)
+        const parseCsv = (tsvText) => { // 함수 이름을 parseTsv로 변경하는 것이 더 정확하지만, 기존 코드와의 일관성을 위해 유지
+            const lines = tsvText.split('\n').filter(line => line.trim() !== '');
             if (lines.length < 2) {
-                console.warn("CSV 데이터에 헤더 또는 내용이 부족합니다.");
+                console.warn("TSV 데이터에 헤더 또는 내용이 부족합니다.");
                 return [];
             }
 
-            // 헤더 파싱 및 공백 제거
-            const headers = lines[0].split(',').map(h => h.trim());
-            console.log("CSV 파싱 - 헤더:", headers); // 디버깅용 로그
+            // 헤더 파싱 및 공백 제거 (탭으로 분리)
+            const headers = lines[0].split('\t').map(h => h.trim());
+            console.log("TSV 파싱 - 헤더:", headers); // 디버깅용 로그
 
             const data = lines.slice(1).map(line => {
-                // 각 줄의 값 파싱 및 공백 제거
-                // 주의: 필드 내에 쉼표가 있을 경우, Google Sheets CSV는 따옴표로 감싸지만,
-                // 기본 split(',')은 이를 처리하지 못할 수 있습니다.
-                // 이 경우 Google Sheet의 데이터를 조정하거나 더 복잡한 CSV 파서가 필요합니다.
-                const values = line.split(',').map(v => v.trim());
+                // 각 줄의 값 파싱 및 공백 제거 (탭으로 분리)
+                const values = line.split('\t').map(v => v.trim());
                 let problem = {};
                 headers.forEach((header, index) => {
                     problem[header] = values[index]; // 헤더와 값을 매핑하여 문제 객체 생성
                 });
                 return problem;
             });
-            console.log("CSV 파싱 - 첫 번째 문제 객체:", data[0]); // 디버깅용 로그
+            console.log("TSV 파싱 - 첫 번째 문제 객체:", data[0]); // 디버깅용 로그
             return data;
         };
 
@@ -139,12 +136,12 @@
             noDataMessage.classList.add('hidden');
 
             try {
-                const response = await fetch(GOOGLE_SHEET_CSV_URL);
+                const response = await fetch(GOOGLE_SHEET_CSV_URL); // 변수명은 그대로 유지
                 if (!response.ok) {
                     throw new Error(`HTTP 오류! 상태: ${response.status}`);
                 }
-                const csvText = await response.text();
-                problems = parseCsv(csvText);
+                const tsvText = await response.text(); // 변수명을 tsvText로 변경
+                problems = parseCsv(tsvText);
 
                 if (problems.length === 0) {
                     noDataMessage.classList.remove('hidden');
