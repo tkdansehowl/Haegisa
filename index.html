@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>해기사 문제풀이</title>
+    <!-- Tailwind CSS CDN을 사용하여 스타일링 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -22,6 +23,7 @@
             해기사 문제풀이
         </h2>
 
+        <!-- 로딩 및 에러 메시지 표시 영역 -->
         <div id="loading-message" class="hidden min-h-24 flex items-center justify-center">
             <p class="text-xl text-gray-700">문제 데이터를 불러오는 중입니다...</p>
         </div>
@@ -32,15 +34,26 @@
             <p class="text-xl">문제 데이터가 없습니다. Google Sheet를 확인해주세요.</p>
         </div>
 
+        <!-- 문제 풀이 영역 -->
         <div id="quiz-container" class="hidden">
+            <div class="mb-4 text-sm text-gray-600">
+                <span id="problem-meta-year"></span>년
+                <span id="problem-meta-round"></span>회차 |
+                <span id="problem-meta-grade"></span>급 |
+                <span id="problem-meta-shiptype"></span> |
+                <span id="problem-meta-subject"></span>
+            </div>
             <div class="mb-6">
+                <!-- 문제 번호와 문제 내용 표시 -->
                 <p class="text-lg font-semibold text-gray-800 mb-2">
                     <span id="problem-number" class="text-blue-500"></span> <span id="problem-question"></span>
                 </p>
                 <ul id="options-list" class="space-y-3">
-                    </ul>
+                    <!-- 보기 버튼들이 여기에 동적으로 삽입됩니다 -->
+                </ul>
             </div>
 
+            <!-- 풀이 영역 -->
             <div id="solution-area" class="mt-6 p-4 rounded-lg bg-yellow-50 border border-yellow-300 text-yellow-800 hidden">
                 <h3 class="font-bold text-lg mb-2">풀이:</h3>
                 <p id="solution-text" class="whitespace-pre-wrap"></p>
@@ -75,6 +88,13 @@
         const solutionText = document.getElementById('solution-text');
         const nextProblemButton = document.getElementById('next-problem-button');
 
+        // 추가된 문제 상세 정보 표시 요소
+        const problemMetaYear = document.getElementById('problem-meta-year');
+        const problemMetaRound = document.getElementById('problem-meta-round');
+        const problemMetaGrade = document.getElementById('problem-meta-grade');
+        const problemMetaShiptype = document.getElementById('problem-meta-shiptype');
+        const problemMetaSubject = document.getElementById('problem-meta-subject');
+
         // 보기1~4를 '가', '나', '사', '아'로 매핑하기 위한 객체
         const optionLabels = {
             '보기1': '가',
@@ -86,17 +106,28 @@
         // CSV 텍스트를 파싱하여 문제 객체 배열로 변환하는 함수
         const parseCsv = (csvText) => {
             const lines = csvText.split('\n').filter(line => line.trim() !== '');
-            if (lines.length < 2) return [];
+            if (lines.length < 2) {
+                console.warn("CSV 데이터에 헤더 또는 내용이 부족합니다.");
+                return [];
+            }
 
+            // 헤더 파싱 및 공백 제거
             const headers = lines[0].split(',').map(h => h.trim());
+            console.log("CSV 파싱 - 헤더:", headers); // 디버깅용 로그
+
             const data = lines.slice(1).map(line => {
+                // 각 줄의 값 파싱 및 공백 제거
+                // 주의: 필드 내에 쉼표가 있을 경우, Google Sheets CSV는 따옴표로 감싸지만,
+                // 기본 split(',')은 이를 처리하지 못할 수 있습니다.
+                // 이 경우 Google Sheet의 데이터를 조정하거나 더 복잡한 CSV 파서가 필요합니다.
                 const values = line.split(',').map(v => v.trim());
                 let problem = {};
                 headers.forEach((header, index) => {
-                    problem[header] = values[index];
+                    problem[header] = values[index]; // 헤더와 값을 매핑하여 문제 객체 생성
                 });
                 return problem;
             });
+            console.log("CSV 파싱 - 첫 번째 문제 객체:", data[0]); // 디버깅용 로그
             return data;
         };
 
@@ -124,7 +155,7 @@
             } catch (e) {
                 console.error("문제 데이터를 불러오는 데 실패했습니다:", e);
                 errorMessage.classList.remove('hidden');
-                errorMessage.querySelector('p').textContent = "문제 데이터를 불러오는 데 실패했습니다. Google Sheet URL을 확인하거나, 웹에 제대로 게시되었는지 확인해주세요.";
+                errorMessage.querySelector('p').textContent = "문제 데이터를 불러오는 데 실패했습니다. Google Sheet URL을 확인하거나, 웹에 제대로 게시되었는지 확인해주세요. (콘솔 로그 확인)";
             } finally {
                 loadingMessage.classList.add('hidden');
             }
@@ -133,14 +164,23 @@
         // 현재 문제를 화면에 표시하는 함수
         const displayProblem = () => {
             const currentProblem = problems[currentProblemIndex];
+            
+            // 문제 상세 정보 업데이트
+            problemMetaYear.textContent = currentProblem['연도'] || '';
+            problemMetaRound.textContent = currentProblem['회차'] || '';
+            problemMetaGrade.textContent = currentProblem['급수'] || '';
+            problemMetaShiptype.textContent = currentProblem['선종'] || '';
+            problemMetaSubject.textContent = currentProblem['과목'] || '';
+
             problemNumberSpan.textContent = `${currentProblemIndex + 1}.`;
-            problemQuestionSpan.textContent = currentProblem['문제'];
+            problemQuestionSpan.textContent = currentProblem['문제'] || '문제 내용을 불러올 수 없습니다.'; // 문제 내용이 없으면 기본 메시지 표시
             optionsList.innerHTML = ''; // 기존 보기 초기화
 
             ['보기1', '보기2', '보기3', '보기4'].forEach((optionKey) => {
                 const li = document.createElement('li');
                 const button = document.createElement('button');
-                button.textContent = `${optionLabels[optionKey]}. ${currentProblem[optionKey]}`;
+                // 보기가 undefined로 나오는 문제 해결을 위해 || '' 추가
+                button.textContent = `${optionLabels[optionKey]}. ${currentProblem[optionKey] || ''}`; 
                 button.className = `
                     w-full text-left p-3 rounded-lg border-2 transition-all duration-200
                     bg-gray-50 border-gray-300 hover:bg-blue-50 hover:border-blue-400 text-gray-700
@@ -168,9 +208,15 @@
             const optionButtons = optionsList.querySelectorAll('button');
 
             optionButtons.forEach(button => {
-                const buttonOptionKey = Object.keys(optionLabels).find(key => 
-                    button.textContent.startsWith(`${optionLabels[key]}.`)
-                );
+                // 버튼 텍스트에서 '가.', '나.' 등을 제거하고 실제 보기 텍스트만 비교하여 optionKey를 찾습니다.
+                const buttonTextPrefix = button.textContent.split('.')[0].trim();
+                let buttonOptionKey = null;
+                for (const key in optionLabels) {
+                    if (optionLabels[key] === buttonTextPrefix) {
+                        buttonOptionKey = key;
+                        break;
+                    }
+                }
 
                 if (buttonOptionKey === correctOptionKey) {
                     // 정답 보기 스타일
@@ -196,7 +242,7 @@
                 isAnsweredCorrectly = false;
                 showSolution = true;
                 solutionArea.classList.remove('hidden'); // 풀이 영역 표시
-                solutionText.textContent = currentProblem['풀이'];
+                solutionText.textContent = currentProblem['풀이'] || '풀이 내용을 불러올 수 없습니다.'; // 풀이 내용이 없으면 기본 메시지 표시
             }
         };
 
