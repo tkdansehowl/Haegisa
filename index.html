@@ -261,11 +261,20 @@
             const selectedGrade = filterGrade.value;
             const selectedShiptype = filterShiptype.value;
 
+            // 공통 과목 정의
+            const commonSubjects = ['항해', '운용', '법규', '영어'];
+            // 선택한 선종에 따른 전문 과목 정의
+            const specializedSubject = (selectedShiptype === '상선') ? '상선전문' : '어선전문';
+
+            // 새로운 필터링 로직: 공통 과목 또는 선택된 전문 과목을 포함
             filteredProblems = allProblems.filter(problem => {
+                const isCommonSubject = commonSubjects.includes(problem['과목']);
+                const isSpecializedSubject = problem['과목'] === specializedSubject;
+                
                 return (selectedYear === '' || problem['연도'] === selectedYear) &&
                        (selectedRound === '' || problem['회차'] === selectedRound) &&
                        (selectedGrade === '' || problem['급수'] === selectedGrade) &&
-                       (selectedShiptype === '' || problem['선종'] === selectedShiptype);
+                       (isCommonSubject || isSpecializedSubject);
             });
 
             // 필터링된 문제를 과목 순서에 따라 정렬
