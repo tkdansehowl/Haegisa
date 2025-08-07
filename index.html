@@ -51,6 +51,9 @@
             <p class="text-gray-700 mb-6">원하는 조건으로 문제를 필터링하여 풀이할 수 있습니다.</p>
             
             <div class="space-y-4 w-full max-w-xs">
+                <button id="continue-quiz-button" class="hidden w-full max-w-xs bg-green-600 text-white py-3 px-6 rounded-lg font-semibold text-lg hover:bg-green-700 transition-colors shadow-md mb-4">
+                    이어하기
+                </button>
                 <div>
                     <label for="filter-year" class="block text-left text-sm font-medium text-gray-700 mb-1">연도</label>
                     <select id="filter-year" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"></select>
@@ -67,7 +70,6 @@
                     <label for="filter-shiptype" class="block text-left text-sm font-medium text-gray-700 mb-1">선종</label>
                     <select id="filter-shiptype" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"></select>
                 </div>
-                <!-- 과목 필터는 제거되었습니다. -->
             </div>
             <button id="start-quiz-button" class="mt-8 w-full max-w-xs bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors shadow-md">
                 문제풀이 시작
@@ -76,9 +78,12 @@
 
         <!-- 문제 풀이 영역 -->
         <div id="quiz-container" class="w-full md:w-3/4 hidden flex flex-col">
-            <h2 class="text-2xl md:text-3xl font-bold text-blue-700 mb-6 text-center">
-                해기사 문제풀이
-            </h2>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl md:text-3xl font-bold text-blue-700">해기사 문제풀이</h2>
+                <button id="back-to-home-button" class="text-sm text-gray-500 hover:text-blue-600 transition-colors">
+                    처음 화면으로
+                </button>
+            </div>
 
             <div class="mb-4 text-sm text-gray-600">
                 <span id="problem-meta-year"></span>년 |
@@ -122,6 +127,7 @@
     <script>
         // 여기에 Google 스프레드시트의 TSV 링크를 붙여넣으세요!
         const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpZGh9h95OtuFdBgUme_sC9n7WjRLZ1LIo8_GXRN2Fsbhu0CnndlXqP_iAPHq3aZJu9yooWY18CFYz/pub?gid=0&single=true&output=tsv'; 
+        const LOCAL_STORAGE_KEY = 'maritimeExamProgress';
 
         let allProblems = []; // 모든 문제 데이터
         let filteredProblems = []; // 필터링된 문제 데이터
@@ -137,6 +143,8 @@
         const filterSection = document.getElementById('filter-section');
         const quizContainer = document.getElementById('quiz-container');
         const problemListSidebar = document.getElementById('problem-list-sidebar'); // 사이드바 컨테이너
+        const continueQuizButton = document.getElementById('continue-quiz-button');
+        const backToHomeButton = document.getElementById('back-to-home-button');
 
         const problemMetaYear = document.getElementById('problem-meta-year');
         const problemMetaRound = document.getElementById('problem-meta-round');
@@ -213,6 +221,7 @@
                     noDataMessage.classList.remove('hidden');
                 } else {
                     populateFilters(); // 필터 드롭다운 채우기
+                    loadProgress(); // 저장된 진행 상황 불러오기
                     filterSection.classList.remove('hidden'); // 필터 섹션 표시
                 }
             } catch (e) {
@@ -234,7 +243,6 @@
 
             const populateSelect = (selectElement, values) => {
                 selectElement.innerHTML = ''; // 기존 옵션 초기화
-                // 첫 번째 옵션으로 "선택하세요" 또는 "모두" 추가 (기본값)
                 const defaultOption = document.createElement('option');
                 defaultOption.value = ''; // 빈 값으로 설정하여 필터링 시 해당 조건 무시
                 defaultOption.textContent = '선택하세요';
@@ -248,9 +256,8 @@
                 });
             };
 
-            // 스프레드시트에서 데이터를 가져오는 대신, '선종' 필터는 직접 옵션을 추가합니다.
             const populateShiptypeSelect = (selectElement) => {
-                selectElement.innerHTML = ''; // 기존 옵션 초기화
+                selectElement.innerHTML = ''; 
                 const defaultOption = document.createElement('option');
                 defaultOption.value = '';
                 defaultOption.textContent = '선택하세요';
@@ -278,21 +285,20 @@
             const selectedGrade = filterGrade.value;
             const selectedShiptype = filterShiptype.value;
 
-            // 문제 풀이 화면에 표시하기 위해 전역 변수에 저장
             selectedShiptypeForQuiz = selectedShiptype;
 
             if (!selectedYear || !selectedRound || !selectedGrade || !selectedShiptype) {
                 alert("연도, 회차, 급수, 선종을 모두 선택해주세요.");
                 return;
             }
+            
+            // 새 문제풀이를 시작할 때 저장된 진행 상황 초기화
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
+            continueQuizButton.classList.add('hidden');
 
-            // 공통 과목 정의
             const commonSubjects = ['항해', '운용', '법규', '영어'];
-            // 선택한 선종에 따른 전문 과목 정의
             const specializedSubject = (selectedShiptype === '상선') ? '상선전문' : '어선전문';
 
-            // 필터링 로직: 공통 과목 또는 선택된 전문 과목을 포함
-            // 스프레드시트에 '선종' 열이 없으므로, 해당 조건은 제거하고 과목만으로 필터링합니다.
             filteredProblems = allProblems.filter(problem => {
                 const isCommonSubject = commonSubjects.includes(problem['과목']);
                 const isSpecializedSubject = problem['과목'] === specializedSubject;
@@ -303,18 +309,15 @@
                        (isCommonSubject || isSpecializedSubject);
             });
 
-            // 필터링된 문제를 과목 순서에 따라 정렬
             filteredProblems.sort((a, b) => {
                 const indexA = subjectOrder.indexOf(a['과목']);
                 const indexB = subjectOrder.indexOf(b['과목']);
-                // 정의되지 않은 과목은 순서상 뒤로 보냄
                 if (indexA === -1 && indexB === -1) return 0;
                 if (indexA === -1) return 1;
                 if (indexB === -1) return -1;
                 return indexA - indexB;
             });
 
-            // 과목별 문제 번호 재설정 및 상태 초기화
             let currentSubject = null;
             let subjectProblemCounter = 0;
             filteredProblems.forEach(problem => {
@@ -323,40 +326,78 @@
                     subjectProblemCounter = 1;
                 }
                 problem.subjectProblemNumber = subjectProblemCounter;
-                problem.status = 'unanswered'; // 모든 문제 상태 초기화
+                problem.status = 'unanswered';
                 subjectProblemCounter++;
             });
-
 
             if (filteredProblems.length === 0) {
                 alert("선택한 조건에 맞는 문제가 없습니다. 필터를 다시 설정해주세요.");
                 return;
             }
 
-            currentProblemIndex = 0; // 필터 적용 시 첫 문제로 리셋
+            currentProblemIndex = 0;
+            startQuiz();
+        };
+
+        // 문제풀이 시작 (필터링된 문제로)
+        const startQuiz = () => {
             filterSection.classList.add('hidden');
             quizContainer.classList.remove('hidden');
-            problemListSidebar.classList.remove('hidden'); // 사이드바 표시
-            displayProblem(); // 필터링된 첫 문제 표시
-            updateProblemListSidebar(); // 사이드바 문제 목록 업데이트
+            problemListSidebar.classList.remove('hidden');
+            displayProblem();
+            updateProblemListSidebar();
+        };
+        
+        // 로컬 스토리지에서 진행 상황 불러오기
+        const loadProgress = () => {
+            const savedProgress = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (savedProgress) {
+                const progress = JSON.parse(savedProgress);
+                filteredProblems = progress.filteredProblems;
+                currentProblemIndex = progress.currentProblemIndex;
+                selectedShiptypeForQuiz = progress.selectedShiptypeForQuiz;
+                
+                continueQuizButton.classList.remove('hidden');
+                continueQuizButton.onclick = () => {
+                    startQuiz();
+                };
+
+                // 필터 드롭다운에 저장된 값 표시
+                filterYear.value = filteredProblems[0]['연도'] || '';
+                filterRound.value = filteredProblems[0]['회차'] || '';
+                filterGrade.value = filteredProblems[0]['급수'] || '';
+                filterShiptype.value = selectedShiptypeForQuiz || '';
+
+                console.log("저장된 진행 상황을 불러왔습니다.");
+            } else {
+                continueQuizButton.classList.add('hidden');
+            }
+        };
+
+        // 현재 진행 상황을 로컬 스토리지에 저장
+        const saveProgress = () => {
+            const progress = {
+                filteredProblems,
+                currentProblemIndex,
+                selectedShiptypeForQuiz,
+            };
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(progress));
+            console.log("진행 상황을 저장했습니다.");
         };
 
         // 현재 문제를 화면에 표시하는 함수
         const displayProblem = () => {
             const currentProblem = filteredProblems[currentProblemIndex];
             
-            // 문제 상세 정보 업데이트
             problemMetaYear.textContent = currentProblem['연도'] || '';
             problemMetaRound.textContent = currentProblem['회차'] || '';
             problemMetaGrade.textContent = currentProblem['급수'] || '';
-            // 스프레드시트 데이터 대신, 선택된 선종을 표시
             problemMetaShiptype.textContent = selectedShiptypeForQuiz || ''; 
             problemMetaSubject.textContent = currentProblem['과목'] || '';
 
-            // 문제 번호는 과목별 번호로 표시
             problemNumberSpan.textContent = `${currentProblem.subjectProblemNumber}.`;
             problemQuestionSpan.textContent = currentProblem['문제'] || '문제 내용을 불러올 수 없습니다.';
-            optionsList.innerHTML = ''; // 기존 보기 초기화
+            optionsList.innerHTML = '';
 
             ['보기1', '보기2', '보기3', '보기4'].forEach((optionKey) => {
                 const li = document.createElement('li');
@@ -372,24 +413,23 @@
                 optionsList.appendChild(li);
             });
 
-            solutionArea.classList.add('hidden'); // 풀이 영역 숨김
-            solutionText.textContent = ''; // 풀이 텍스트 초기화
+            solutionArea.classList.add('hidden');
+            solutionText.textContent = '';
             showSolution = false;
             isAnsweredCorrectly = null;
-            updateProblemListSidebar(); // 문제 변경 시 사이드바 하이라이트 업데이트
+            updateProblemListSidebar();
+            saveProgress(); // 문제 변경 시 자동 저장
         };
 
         // 문제 목록 사이드바 업데이트
         const updateProblemListSidebar = () => {
-            sidebarProblemNumbers.innerHTML = ''; // 기존 목록 초기화
+            sidebarProblemNumbers.innerHTML = '';
             let currentSubjectDisplayed = null;
 
             filteredProblems.forEach((problem, index) => {
-                // 과목이 변경될 때만 과목 헤더 추가
                 if (problem['과목'] !== currentSubjectDisplayed) {
                     currentSubjectDisplayed = problem['과목'];
                     const subjectHeadingLi = document.createElement('li');
-                    // Tailwind CSS의 col-span-5를 사용하여 그리드 전체 너비를 차지하도록 함
                     subjectHeadingLi.className = 'col-span-5 text-left mt-4 mb-1 text-gray-800 font-bold text-base border-b pb-1 border-gray-300';
                     subjectHeadingLi.textContent = currentSubjectDisplayed;
                     sidebarProblemNumbers.appendChild(subjectHeadingLi);
@@ -397,11 +437,9 @@
 
                 const li = document.createElement('li');
                 const button = document.createElement('button');
-                // 문제 번호는 과목별 번호로 표시
                 button.textContent = `${problem.subjectProblemNumber}`; 
                 
-                // 문제 상태에 따른 배경색 클래스 추가
-                let statusClass = 'bg-gray-200 text-gray-700 hover:bg-gray-300'; // 기본값
+                let statusClass = 'bg-gray-200 text-gray-700 hover:bg-gray-300';
                 if (problem.status === 'correct') {
                     statusClass = 'bg-green-200 text-green-800';
                 } else if (problem.status === 'incorrect') {
@@ -412,26 +450,24 @@
                     p-2 rounded-md transition-colors duration-150 text-center
                     flex items-center justify-center w-10 h-10 flex-shrink-0
                     ${index === currentProblemIndex
-                        ? 'bg-blue-600 text-white font-bold shadow-sm' // 현재 문제
-                        : statusClass // 풀이 상태에 따른 색상
+                        ? 'bg-blue-600 text-white font-bold shadow-sm'
+                        : statusClass
                     }
                 `;
                 button.onclick = () => {
-                    currentProblemIndex = index; // 클릭한 문제로 인덱스 변경
-                    displayProblem(); // 해당 문제 표시
+                    currentProblemIndex = index;
+                    displayProblem();
                 };
                 li.appendChild(button);
                 sidebarProblemNumbers.appendChild(li);
             });
 
-            // 현재 문제 번호가 사이드바에 보이도록 스크롤
             const activeProblemButton = sidebarProblemNumbers.querySelector('.bg-blue-600');
             if (activeProblemButton) {
                 activeProblemButton.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         };
 
-        // 보기 선택 시 호출되는 함수
         const handleAnswer = (selectedOptionKey) => {
             if (showSolution) return;
 
@@ -474,21 +510,20 @@
             if (selectedOptionKey === actualCorrectOptionKey) {
                 isAnsweredCorrectly = true;
                 showSolution = false;
-                filteredProblems[currentProblemIndex].status = 'correct'; // 정답 상태 저장
+                filteredProblems[currentProblemIndex].status = 'correct';
                 setTimeout(() => {
                     handleNextProblem();
                 }, 1000);
             } else {
                 isAnsweredCorrectly = false;
                 showSolution = true;
-                filteredProblems[currentProblemIndex].status = 'incorrect'; // 오답 상태 저장
+                filteredProblems[currentProblemIndex].status = 'incorrect';
                 solutionArea.classList.remove('hidden');
                 solutionText.textContent = currentProblem['풀이'] || '풀이 내용을 불러올 수 없습니다.';
             }
-            updateProblemListSidebar(); // 상태 변경 후 사이드바 업데이트
+            updateProblemListSidebar();
         };
 
-        // 다음 문제로 이동하는 함수
         const handleNextProblem = () => {
             showSolution = false;
             isAnsweredCorrectly = null;
@@ -504,9 +539,23 @@
             }
         };
 
+        // 필터 화면으로 돌아가는 기능
+        const backToHome = () => {
+            filterSection.classList.remove('hidden');
+            quizContainer.classList.add('hidden');
+            problemListSidebar.classList.add('hidden');
+            // 로컬 스토리지에 저장된 내용이 있다면 '이어하기' 버튼 표시
+            if (localStorage.getItem(LOCAL_STORAGE_KEY)) {
+                continueQuizButton.classList.remove('hidden');
+            } else {
+                continueQuizButton.classList.add('hidden');
+            }
+        };
+
         // 이벤트 리스너 연결
         startQuizButton.addEventListener('click', applyFilters);
         nextProblemButton.addEventListener('click', handleNextProblem);
+        backToHomeButton.addEventListener('click', backToHome);
 
         // 페이지 로드 시 문제 데이터 불러오기
         window.onload = fetchProblems;
